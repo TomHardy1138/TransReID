@@ -314,31 +314,39 @@ class build_transformer_local(nn.Module):
         global_feat = b1_feat[:, 0]
 
         # JPM branch
-        feature_length = features.size(1) - 1
-        patch_length = feature_length // self.divide_length
+        feature_length = 210 # features.size(1) - 1
+        patch_length = 52 # feature_length // self.divide_length
         token = features[:, 0:1]
 
-        if self.rearrange:
-            x = shuffle_unit(features, self.shift_num, self.shuffle_groups)
-        else:
-            x = features[:, 1:]
+        # self.rearrange TRUE
+        # if self.rearrange:
+        #     x = shuffle_unit(features, self.shift_num, self.shuffle_groups)
+        # else:
+        #     x = features[:, 1:]
+        x = features[:, 1:]
+
+
         # lf_1
-        b1_local_feat = x[:, :patch_length]
+        b1_local_feat = x[:, :52]
+        #b1_local_feat = x[:, :patch_length]
         b1_local_feat = self.b2(torch.cat((token, b1_local_feat), dim=1))
         local_feat_1 = b1_local_feat[:, 0]
 
         # lf_2
-        b2_local_feat = x[:, patch_length:patch_length*2]
+        b2_local_feat = x[:, 52:104]
+        # b2_local_feat = x[:, patch_length:patch_length*2]
         b2_local_feat = self.b2(torch.cat((token, b2_local_feat), dim=1))
         local_feat_2 = b2_local_feat[:, 0]
 
         # lf_3
-        b3_local_feat = x[:, patch_length*2:patch_length*3]
+        b3_local_feat = x[:, 104:156]
+        # b3_local_feat = x[:, patch_length*2:patch_length*3]
         b3_local_feat = self.b2(torch.cat((token, b3_local_feat), dim=1))
         local_feat_3 = b3_local_feat[:, 0]
 
         # lf_4
-        b4_local_feat = x[:, patch_length*3:patch_length*4]
+        b4_local_feat = x[:, 156:208]
+        # b4_local_feat = x[:, patch_length*3:patch_length*4]
         b4_local_feat = self.b2(torch.cat((token, b4_local_feat), dim=1))
         local_feat_4 = b4_local_feat[:, 0]
 

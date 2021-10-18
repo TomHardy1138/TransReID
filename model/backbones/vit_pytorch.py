@@ -117,6 +117,14 @@ default_cfgs = {
 }
 
 
+# class GELU_onnx(nn.Module):
+#     def __init__(self):
+#         super().__init__()
+    
+#     def forward(self, x):
+#         return 0.5 * x * (1 + math.erf(x / math.sqrt(2.))))
+
+
 class Mlp(nn.Module):
     def __init__(self, in_features, hidden_features=None, out_features=None, act_layer=nn.GELU, drop=0.):
         super().__init__()
@@ -151,6 +159,9 @@ class Attention(nn.Module):
 
     def forward(self, x):
         B, N, C = x.shape
+        #qkv = self.qkv(x)
+        #print(qkv.size(), B, N, C)
+        #qkv = qkv.reshape(B, N, 3, self.num_heads, C // self.num_heads).permute(2, 0, 3, 1, 4)
         qkv = self.qkv(x).reshape(B, N, 3, self.num_heads, C // self.num_heads).permute(2, 0, 3, 1, 4)
         q, k, v = qkv[0], qkv[1], qkv[2]   # make torchscript happy (cannot use tensor as tuple)
 
@@ -376,17 +387,19 @@ class TransReID(nn.Module):
         B = x.shape[0]
         x = self.patch_embed(x)
 
-        cls_tokens = self.cls_token.expand(B, -1, -1)  # stole cls_tokens impl from Phil Wang, thanks
+        # cls_tokens = self.cls_token.expand(B, -1, -1)  # stole cls_tokens impl from Phil Wang, thanks
+        cls_tokens = self.cls_token
         x = torch.cat((cls_tokens, x), dim=1)
 
-        if self.cam_num > 0 and self.view_num > 0:
-            x = x + self.pos_embed + self.sie_xishu * self.sie_embed[camera_id * self.view_num + view_id]
-        elif self.cam_num > 0:
-            x = x + self.pos_embed + self.sie_xishu * self.sie_embed[camera_id]
-        elif self.view_num > 0:
-            x = x + self.pos_embed + self.sie_xishu * self.sie_embed[view_id]
-        else:
-            x = x + self.pos_embed
+        # if self.cam_num > 0 and self.view_num > 0:
+        #     x = x + self.pos_embed + self.sie_xishu * self.sie_embed[camera_id * self.view_num + view_id]
+        # elif self.cam_num > 0:
+        #     x = x + self.pos_embed + self.sie_xishu * self.sie_embed[camera_id]
+        # elif self.view_num > 0:
+        #     x = x + self.pos_embed + self.sie_xishu * self.sie_embed[view_id]
+        # else:
+        #     x = x + self.pos_embed
+        x = x + self.pos_embed
 
         x = self.pos_drop(x)
 
@@ -404,6 +417,11 @@ class TransReID(nn.Module):
             return x[:, 0]
 
     def forward(self, x, cam_label=None, view_label=None):
+        if torch.onnx.is_in_onnx_export():
+            mean = torch.Tensor(3*[0.5]).view(1, 3, 1, 1).cuda()
+            std = torch.Tensor(3*[0.5]).view(1, 3, 1, 1).cuda()
+            x = x.div(255)
+            x = x.sub_(mean).div(std)
         x = self.forward_features(x, cam_label, view_label)
         return x
 
